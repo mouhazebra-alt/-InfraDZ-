@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "P-538bwcygpee-2Vsp_CB"
+uri = "file://artifacts/traffic-law-dz/assets/images/icon.png"
+type = "image"
+title = "generated_image"
