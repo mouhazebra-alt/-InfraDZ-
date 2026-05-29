@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  AccessibilityInfo,
+  AccessibilityRole,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -12,7 +14,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
 } from "react-native-reanimated";
 import { useColors } from "@/hooks/useColors";
 import { useApp } from "@/context/AppContext";
@@ -31,6 +32,13 @@ const SEVERITY_COLORS = {
   critical: "#DC143C",
 };
 
+const SEVERITY_ICONS = {
+  low: "check-circle",
+  medium: "alert-circle",
+  high: "alert-triangle",
+  critical: "x-circle",
+};
+
 const SEVERITY_LABELS = {
   low: "خفيفة",
   medium: "متوسطة",
@@ -46,6 +54,7 @@ export function ViolationCard({ violation, onPress, compact = false }: Violation
 
   const category = CATEGORIES.find((c) => c.id === violation.category);
   const severityColor = SEVERITY_COLORS[violation.severity];
+  const severityIcon = SEVERITY_ICONS[violation.severity];
   const favorite = isFavorite(violation.id);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -57,7 +66,7 @@ export function ViolationCard({ violation, onPress, compact = false }: Violation
   }));
 
   const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.97, { damping: 15 });
+    scale.value = withSpring(0.98, { damping: 15 });
   }, [scale]);
 
   const handlePressOut = useCallback(() => {
@@ -66,7 +75,7 @@ export function ViolationCard({ violation, onPress, compact = false }: Violation
 
   const handleFavorite = useCallback(async () => {
     if (Platform.OS !== "web") {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     heartScale.value = withSpring(1.4, { damping: 8 }, () => {
       heartScale.value = withSpring(1, { damping: 8 });
@@ -77,13 +86,13 @@ export function ViolationCard({ violation, onPress, compact = false }: Violation
   const styles = StyleSheet.create({
     card: {
       backgroundColor: colors.card,
-      borderRadius: colors.radius,
-      padding: compact ? 12 : 16,
-      marginBottom: 12,
+      borderRadius: 16,
+      padding: compact ? 14 : 18,
+      marginBottom: 14,
       shadowColor: colors.shadow,
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 1,
-      shadowRadius: 8,
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
       elevation: 3,
       borderWidth: 1,
       borderColor: colors.border,
@@ -92,9 +101,10 @@ export function ViolationCard({ violation, onPress, compact = false }: Violation
       flexDirection: "row-reverse",
       alignItems: "flex-start",
       justifyContent: "space-between",
-      marginBottom: 8,
+      marginBottom: 12,
+      gap: 12,
     },
-    titleRow: {
+    titleSection: {
       flex: 1,
       alignItems: "flex-end",
     },
@@ -105,83 +115,38 @@ export function ViolationCard({ violation, onPress, compact = false }: Violation
       textAlign: "right",
       writingDirection: "rtl",
       lineHeight: 22,
+      marginBottom: 6,
     },
     categoryBadge: {
       flexDirection: "row-reverse",
       alignItems: "center",
-      gap: 4,
+      gap: 6,
       backgroundColor: colors.muted,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
       borderRadius: 20,
-      marginTop: 4,
       alignSelf: "flex-end",
+    },
+    categoryIcon: {
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      backgroundColor: category?.color || colors.primary,
     },
     categoryText: {
       fontSize: 11,
-      color: colors.mutedForeground,
+      color: category?.color || colors.primary,
       fontWeight: "600" as const,
+      textAlign: "right",
+      writingDirection: "rtl",
     },
     favoriteBtn: {
-      padding: 4,
-      marginRight: 8,
-    },
-    fineRow: {
-      flexDirection: "row-reverse",
-      justifyContent: "space-between",
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       alignItems: "center",
-      marginTop: compact ? 8 : 12,
-      paddingTop: compact ? 8 : 12,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-    },
-    fineBlock: {
-      alignItems: "flex-end",
-    },
-    fineLabel: {
-      fontSize: 11,
-      color: colors.mutedForeground,
-      marginBottom: 2,
-    },
-    fineAmount: {
-      fontSize: compact ? 16 : 20,
-      fontWeight: "800" as const,
-      color: colors.primary,
-    },
-    fineCurrency: {
-      fontSize: 12,
-      fontWeight: "600" as const,
-      color: colors.primary,
-    },
-    pointsBlock: {
-      alignItems: "center",
-    },
-    pointsLabel: {
-      fontSize: 11,
-      color: colors.mutedForeground,
-      marginBottom: 2,
-    },
-    pointsValue: {
-      fontSize: compact ? 14 : 18,
-      fontWeight: "800" as const,
-      color: colors.warning,
-    },
-    severityDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: severityColor,
-      marginLeft: 6,
-    },
-    severityRow: {
-      flexDirection: "row-reverse",
-      alignItems: "center",
-      marginTop: 6,
-    },
-    severityText: {
-      fontSize: 11,
-      color: severityColor,
-      fontWeight: "600" as const,
+      justifyContent: "center",
+      backgroundColor: favorite ? colors.accent : colors.muted,
     },
     description: {
       fontSize: 13,
@@ -189,16 +154,90 @@ export function ViolationCard({ violation, onPress, compact = false }: Violation
       textAlign: "right",
       writingDirection: "rtl",
       lineHeight: 19,
-      marginTop: 6,
+      marginBottom: 12,
+    },
+    severitySection: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      gap: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      backgroundColor: colors.muted,
+      borderRadius: 12,
+      marginBottom: 12,
+    },
+    severityIcon: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: severityColor,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    severityText: {
+      fontSize: 12,
+      color: severityColor,
+      fontWeight: "600" as const,
+      textAlign: "right",
+      writingDirection: "rtl",
+    },
+    fineRow: {
+      flexDirection: "row-reverse",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      gap: 12,
+    },
+    fineBlock: {
+      flex: 1,
+      alignItems: "flex-end",
+    },
+    fineLabel: {
+      fontSize: 11,
+      color: colors.mutedForeground,
+      marginBottom: 4,
+      textAlign: "right",
+      writingDirection: "rtl",
+    },
+    fineAmount: {
+      fontSize: compact ? 16 : 18,
+      fontWeight: "800" as const,
+      color: colors.primary,
+      textAlign: "right",
+      writingDirection: "rtl",
+    },
+    pointsBlock: {
+      flex: 1,
+      alignItems: "flex-end",
+    },
+    pointsLabel: {
+      fontSize: 11,
+      color: colors.mutedForeground,
+      marginBottom: 4,
+      textAlign: "right",
+      writingDirection: "rtl",
+    },
+    pointsValue: {
+      fontSize: compact ? 14 : 16,
+      fontWeight: "800" as const,
+      color: colors.warning,
+      textAlign: "right",
+      writingDirection: "rtl",
     },
     articleText: {
       fontSize: 11,
       color: colors.info,
       textAlign: "right",
-      marginTop: 6,
+      writingDirection: "rtl",
+      marginTop: 10,
       fontStyle: "italic",
     },
   });
+
+  const accessibilityLabel = `${violation.nameAr}، خطورة: ${SEVERITY_LABELS[violation.severity]}`;
+  const accessibilityHint = `الغرامة: ${violation.fine} دج، النقاط: ${violation.points}`;
 
   return (
     <Animated.View style={animatedStyle}>
@@ -207,59 +246,65 @@ export function ViolationCard({ violation, onPress, compact = false }: Violation
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        accessibilityRole="button" as AccessibilityRole
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint}
       >
         <View style={styles.card}>
+          {/* Header with favorite button */}
           <View style={styles.header}>
             <Animated.View style={heartStyle}>
-              <TouchableOpacity onPress={handleFavorite} style={styles.favoriteBtn}>
+              <TouchableOpacity
+                onPress={handleFavorite}
+                style={styles.favoriteBtn}
+                accessibilityRole="button" as AccessibilityRole
+                accessibilityLabel={favorite ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
+                accessibilityHint="اضغط لتبديل حالة المفضلة"
+              >
                 <Feather
                   name={favorite ? "heart" : "heart"}
                   size={20}
                   color={favorite ? colors.primary : colors.mutedForeground}
-                  style={{ opacity: favorite ? 1 : 0.5 }}
                 />
               </TouchableOpacity>
             </Animated.View>
-            <View style={styles.titleRow}>
+
+            <View style={styles.titleSection}>
               <Text style={styles.title}>{violation.nameAr}</Text>
               {category && (
                 <View style={styles.categoryBadge}>
-                  <Text style={[styles.categoryText, { color: category.color }]}>
-                    {category.nameAr}
-                  </Text>
+                  <View style={[styles.categoryIcon, { backgroundColor: category.color }]} />
+                  <Text style={styles.categoryText}>{category.nameAr}</Text>
                 </View>
               )}
             </View>
           </View>
 
-          {!compact && (
-            <Text style={styles.description} numberOfLines={2}>
-              {violation.descriptionAr}
-            </Text>
-          )}
+          {/* Description */}
+          {!compact && <Text style={styles.description} numberOfLines={2}>{violation.descriptionAr}</Text>}
 
-          <View style={styles.severityRow}>
-            <View style={styles.severityDot} />
+          {/* Severity Badge */}
+          <View style={styles.severitySection}>
+            <View style={[styles.severityIcon, { backgroundColor: severityColor }]}>
+              <Feather name={severityIcon as any} size={12} color="white" />
+            </View>
             <Text style={styles.severityText}>{SEVERITY_LABELS[violation.severity]}</Text>
           </View>
 
+          {/* Fine and Points Row */}
           <View style={styles.fineRow}>
             <View style={styles.pointsBlock}>
-              <Text style={styles.pointsLabel}>النقاط المخصومة</Text>
-              <Text style={styles.pointsValue}>-{violation.points} نقاط</Text>
+              <Text style={styles.pointsLabel}>النقاط</Text>
+              <Text style={styles.pointsValue}>-{violation.points}</Text>
             </View>
             <View style={styles.fineBlock}>
-              <Text style={styles.fineLabel}>الغرامة المالية</Text>
-              <Text style={styles.fineAmount}>
-                {violation.fine.toLocaleString("ar-DZ")}{" "}
-                <Text style={styles.fineCurrency}>دج</Text>
-              </Text>
+              <Text style={styles.fineLabel}>الغرامة</Text>
+              <Text style={styles.fineAmount}>{violation.fine.toLocaleString("ar-DZ")}</Text>
             </View>
           </View>
 
-          {!compact && (
-            <Text style={styles.articleText}>{violation.article}</Text>
-          )}
+          {/* Article Reference */}
+          {!compact && <Text style={styles.articleText}>{violation.article}</Text>}
         </View>
       </TouchableOpacity>
     </Animated.View>
